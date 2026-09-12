@@ -26,7 +26,6 @@ Item {
   readonly property string avatarPosition: (root.pluginSettings && root.pluginSettings.avatarPosition) ? root.pluginSettings.avatarPosition : "top"
   readonly property string effectiveAvatarPath: root.pluginSettings ? (root.pluginSettings.avatarPath || "") : ""
   readonly property string networkWidgetPosition: (root.pluginSettings && root.pluginSettings.networkWidgetPosition) ? root.pluginSettings.networkWidgetPosition : "off"
-  readonly property string powerControlsPosition: (root.pluginSettings && root.pluginSettings.powerControlsPosition) ? root.pluginSettings.powerControlsPosition : "off"
   readonly property int cornerMargin: Style.space(24)
   readonly property int cornerSpacing: Style.space(14)
 
@@ -344,19 +343,6 @@ Item {
         if (root.networkWidgetPosition === "top-right") return topRightCorner
         if (root.networkWidgetPosition === "bottom-left") return bottomLeftCorner
         if (root.networkWidgetPosition === "bottom-right") return bottomRightCorner
-        return cornerLayer
-      }
-    }
-
-    PowerControlsWidget {
-      id: powerControlsWidget
-      visible: root.powerControlsPosition !== "off"
-      interactive: root.inputEnabled
-      parent: {
-        if (root.powerControlsPosition === "top-left") return topLeftCorner
-        if (root.powerControlsPosition === "top-right") return topRightCorner
-        if (root.powerControlsPosition === "bottom-left") return bottomLeftCorner
-        if (root.powerControlsPosition === "bottom-right") return bottomRightCorner
         return cornerLayer
       }
     }

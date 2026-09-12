@@ -19,7 +19,6 @@ PanelWindow {
   property string avatarMode: "file" // "file" | "url"
   property string weatherUnit: "auto" // "auto" | "metric" | "imperial"
   property string networkWidgetPosition: "off" // "off" | "top-left" | "top-right" | "bottom-left" | "bottom-right"
-  property string powerControlsPosition: "off" // "off" | "top-left" | "top-right" | "bottom-left" | "bottom-right"
 
   // Shared system weather location (~/.local/state/omarchy/settings/weather.json)
   property var sharedLocationState: ({ name: "", latitude: null, longitude: null })
@@ -125,7 +124,6 @@ PanelWindow {
       ? pluginSettings.weatherUnit
       : "auto"
     networkWidgetPosition = root.validCornerKey(pluginSettings.networkWidgetPosition)
-    powerControlsPosition = root.validCornerKey(pluginSettings.powerControlsPosition)
     avatarMode = "file"
     fileInput.text = formAvatarPath
     urlInput.text = ""
@@ -150,8 +148,7 @@ PanelWindow {
       timeFormat: timeInput.text.trim() || "h:mm AP",
       weatherLocation: root.pluginSettings ? (root.pluginSettings.weatherLocation || "") : "",
       weatherUnit: root.weatherUnit,
-      networkWidgetPosition: root.networkWidgetPosition,
-      powerControlsPosition: root.powerControlsPosition
+      networkWidgetPosition: root.networkWidgetPosition
     }
     if (closeAfter) {
       root.saveRequested(data)
@@ -999,73 +996,6 @@ PanelWindow {
           }
         }
 
-        // Power Controls Widget
-        Column {
-          width: parent.width
-          spacing: Style.space(4)
-
-          Row {
-            width: parent.width
-            spacing: Style.space(8)
-            Text {
-              text: "Power Controls"
-              color: Color.lock.text
-              font.family: Style.font.family
-              font.pixelSize: Style.font.body
-              font.bold: true
-            }
-            Text {
-              text: "Suspend/Reboot/Shutdown buttons in a screen corner"
-              color: Color.lock.placeholder
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              anchors.verticalCenter: parent.verticalCenter
-            }
-          }
-
-          Flow {
-            width: parent.width
-            spacing: Style.space(8)
-
-            Repeater {
-              model: [
-                { key: "off", label: "Off" },
-                { key: "top-left", label: "Top Left" },
-                { key: "top-right", label: "Top Right" },
-                { key: "bottom-left", label: "Bottom Left" },
-                { key: "bottom-right", label: "Bottom Right" }
-              ]
-
-              delegate: BorderSurface {
-                id: powerPosBtn
-                readonly property bool isSelected: root.powerControlsPosition === modelData.key
-                width: 110
-                height: 32
-                radius: Style.cornerRadius
-                color: isSelected ? Util.alpha(Color.lock.borderActive, 0.25) : (powerPosMouse.containsMouse ? Util.alpha(Color.lock.border, 0.15) : Color.lock.background)
-                borderSpec: Border.surfaceSpec("lock", isSelected ? "border-active" : "border", isSelected ? Color.lock.borderActive : Color.lock.border, isSelected ? 2 : 1, "border-alpha")
-
-                Text {
-                  anchors.centerIn: parent
-                  text: modelData.label
-                  color: powerPosBtn.isSelected ? Color.lock.text : Color.lock.placeholder
-                  font.family: Style.font.family
-                  font.pixelSize: Style.font.bodySmall
-                  font.bold: powerPosBtn.isSelected
-                }
-
-                MouseArea {
-                  id: powerPosMouse
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.powerControlsPosition = modelData.key
-                }
-              }
-            }
-          }
-        }
-
         // Action Buttons
         Row {
           anchors.right: parent.right
@@ -1441,20 +1371,6 @@ PanelWindow {
               if (root.networkWidgetPosition === "top-right") return previewTopRightCorner
               if (root.networkWidgetPosition === "bottom-left") return previewBottomLeftCorner
               if (root.networkWidgetPosition === "bottom-right") return previewBottomRightCorner
-              return previewContainer
-            }
-          }
-
-          // Power controls corner preview (same real widget, non-interactive
-          // here so a click in the mockup can never actually fire an action).
-          PowerControlsWidget {
-            visible: root.powerControlsPosition !== "off"
-            interactive: false
-            parent: {
-              if (root.powerControlsPosition === "top-left") return previewTopLeftCorner
-              if (root.powerControlsPosition === "top-right") return previewTopRightCorner
-              if (root.powerControlsPosition === "bottom-left") return previewBottomLeftCorner
-              if (root.powerControlsPosition === "bottom-right") return previewBottomRightCorner
               return previewContainer
             }
           }

@@ -19,11 +19,10 @@ DEFAULTS='{
   "timeFormat": "h:mm AP",
   "weatherLocation": "",
   "weatherUnit": "auto",
-  "networkWidgetPosition": "off",
-  "powerControlsPosition": "off"
+  "networkWidgetPosition": "off"
 }'
 
-VALID_KEYS=(albumArtPosition avatarPath avatarPosition dateFormat timeFormat weatherUnit networkWidgetPosition powerControlsPosition)
+VALID_KEYS=(albumArtPosition avatarPath avatarPosition dateFormat timeFormat weatherUnit networkWidgetPosition)
 
 usage() {
   cat <<'EOF'
@@ -45,7 +44,6 @@ Keys:
   timeFormat               Qt time format string    (e.g. "h:mm AP")
   weatherUnit               auto | metric | imperial
   networkWidgetPosition     off | top-left | top-right | bottom-left | bottom-right
-  powerControlsPosition     off | top-left | top-right | bottom-left | bottom-right
 
 Weather location isn't set here — it follows Omarchy's own weather widget.
 Use `omarchy-weather-location` to change it.
@@ -128,7 +126,7 @@ cmd_set() {
         *) echo "omalock: weatherUnit must be one of: auto, metric, imperial" >&2; exit 2 ;;
       esac
       ;;
-    networkWidgetPosition|powerControlsPosition)
+    networkWidgetPosition)
       case "$value" in
         off|top-left|top-right|bottom-left|bottom-right) ;;
         *) echo "omalock: $key must be one of: off, top-left, top-right, bottom-left, bottom-right" >&2; exit 2 ;;

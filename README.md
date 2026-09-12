@@ -1,6 +1,6 @@
 # OmaLock - Minimalist Lock Screen for Omarchy
 
-A Quickshell lock screen plugin for Omarchy that replaces the stock password-only prompt with a minimalist, theme-aware screen: clock, weather, an optional avatar, now-playing media controls for any MPRIS-compatible player, network status, and quick power controls — all positionable and configurable from a built-in settings panel, without touching PAM or fingerprint authentication.
+A Quickshell lock screen plugin for Omarchy that replaces the stock password-only prompt with a minimalist, theme-aware screen: clock, weather, an optional avatar, now-playing media controls for any MPRIS-compatible player, and network status — all positionable and configurable from a built-in settings panel, without touching PAM or fingerprint authentication.
 
 > **Disclaimer:** *This project is an unofficial community plugin for Omarchy. It is not
 > developed by, endorsed by, or officially connected to Omarchy, Spotify AB, Google (YouTube
@@ -18,7 +18,6 @@ A Quickshell lock screen plugin for Omarchy that replaces the stock password-onl
 - **Avatar**: circular avatar image, selectable from a local file or a direct image URL (downloaded and cached locally, never re-fetched at lock time). Position: top, left, or right of the clock.
 - **Now Playing**: works with any MPRIS-compatible media player — Spotify, a YouTube Music PWA/browser extension that exposes MPRIS, VLC, mpv, Rhythmbox, and others — shown only while a session is active (hidden entirely otherwise). Track title/artist, a live progress bar, Play/Pause/Next/Previous controls (via the stock Omarchy MPRIS media service — no `playerctl` dependency), and the active player's real album art (cached locally, circular, with a generic music-note glyph fallback when no art is available). Album art position: top, left, or right of the controls.
 - **Network Status**: shows the active Wi-Fi (SSID + signal-strength icon, same thresholds as Omarchy's own network widget) or Ethernet (interface name) connection. Hidden when offline. Placeable in any screen corner.
-- **Power Controls**: Suspend / Reboot / Shutdown buttons, reachable without unlocking (same convention as most login/lock screens). Each button requires a second confirming click within 3 seconds, and is disabled while the screen is asleep or during a Settings preview, so a stray click can never trigger it for real. Placeable in any screen corner; if placed in the same corner as Network Status, the two are automatically laid out side by side instead of overlapping.
 - **Theme-aware**: every color comes from the active Omarchy theme's `Color.lock.*` tokens — no hardcoded palette, no new theme files required.
 - **Settings Panel**: a dedicated in-shell settings window (menu: **Style → Omalock**, or `omarchy-shell asdfsnlr.omalock openSettings`) with a live preview pane that updates as you type, before you save.
 
@@ -28,7 +27,6 @@ A Quickshell lock screen plugin for Omarchy that replaces the stock password-onl
 - **`curl`** — used for weather (wttr.in / Open-Meteo), avatar-by-URL downloads, and album art downloads from the active MPRIS player. Ships with a stock Omarchy install.
 - **`zenity`** — optional, only used by the Settings panel's "Browse..." local file picker for the avatar. If absent, avatars can still be set by pasting a local path or an image URL directly.
 - **NetworkManager**, via Quickshell's built-in `Quickshell.Networking` module — required for the Network Status widget to detect Wi-Fi/Ethernet state. This is Omarchy's default network backend, so no extra setup is needed on a stock install.
-- **`systemctl`** — used by the Suspend power control (`systemctl suspend`). Reboot/Shutdown use Omarchy's own `omarchy-system-reboot` / `omarchy-system-shutdown` helpers.
 - **`jq`** — only needed for the optional `omalock` CLI tool (`bin/omalock`); the lock screen itself doesn't use it.
 - No Python, Node.js runtime, or other language dependency is required at runtime (a `node` binary is only used once, optionally, by `install.sh` to register the menu entry — the plugin itself needs nothing beyond Quickshell/QML).
 
@@ -85,7 +83,6 @@ All settings are stored in `~/.config/omalock/settings.json` — separate from t
 - **Weather Location**: read-only in this plugin — it mirrors whatever location is configured for the system's own weather widget (`omarchy-weather-location` or the weather bar widget's own location editor), so both stay in sync automatically.
 - **Temperature Unit**: Auto (locale-based) / Celsius / Fahrenheit.
 - **Network Status**: Off, or a screen corner (Top Left / Top Right / Bottom Left / Bottom Right).
-- **Power Controls**: Off, or a screen corner (same four options).
 
 Open the settings panel from the Omarchy menu (**Super** key → **Style** → **Omalock**), or run:
 
@@ -115,7 +112,6 @@ omalock set avatarPosition left
 omalock set albumArtPosition right
 omalock set weatherUnit metric
 omalock set networkWidgetPosition top-right
-omalock set powerControlsPosition off
 omalock set dateFormat "yyyy-MM-dd"
 omalock set timeFormat "HH:mm"
 omalock set avatarPath "$HOME/Pictures/avatar.png"

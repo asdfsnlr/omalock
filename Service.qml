@@ -29,8 +29,7 @@ Item {
     timeFormat: "h:mm AP",
     weatherLocation: "",
     weatherUnit: "auto",
-    networkWidgetPosition: "off",
-    powerControlsPosition: "off"
+    networkWidgetPosition: "off"
   })
   property bool settingsWindowCreated: false
   property bool settingsWindowVisible: false
@@ -50,8 +49,7 @@ Item {
       timeFormat: "h:mm AP",
       weatherLocation: "",
       weatherUnit: "auto",
-      networkWidgetPosition: "off",
-      powerControlsPosition: "off"
+      networkWidgetPosition: "off"
     }
     if (!raw || String(raw).trim() === "") {
       root.pluginSettings = defaults
@@ -67,8 +65,7 @@ Item {
         timeFormat: (data && data.timeFormat !== undefined && String(data.timeFormat).trim() !== "") ? String(data.timeFormat) : defaults.timeFormat,
         weatherLocation: (data && data.weatherLocation !== undefined) ? String(data.weatherLocation) : defaults.weatherLocation,
         weatherUnit: (data && (data.weatherUnit === "metric" || data.weatherUnit === "imperial" || data.weatherUnit === "auto")) ? data.weatherUnit : defaults.weatherUnit,
-        networkWidgetPosition: (data && data.networkWidgetPosition !== undefined) ? root.validCornerPosition(data.networkWidgetPosition, defaults.networkWidgetPosition) : defaults.networkWidgetPosition,
-        powerControlsPosition: (data && data.powerControlsPosition !== undefined) ? root.validCornerPosition(data.powerControlsPosition, defaults.powerControlsPosition) : defaults.powerControlsPosition
+        networkWidgetPosition: (data && data.networkWidgetPosition !== undefined) ? root.validCornerPosition(data.networkWidgetPosition, defaults.networkWidgetPosition) : defaults.networkWidgetPosition
       }
     } catch (e) {
       root.pluginSettings = defaults
@@ -84,8 +81,7 @@ Item {
       timeFormat: (data.timeFormat !== undefined && String(data.timeFormat).trim() !== "") ? String(data.timeFormat) : "h:mm AP",
       weatherLocation: data.weatherLocation !== undefined ? String(data.weatherLocation) : root.pluginSettings.weatherLocation,
       weatherUnit: (data.weatherUnit === "metric" || data.weatherUnit === "imperial" || data.weatherUnit === "auto") ? data.weatherUnit : "auto",
-      networkWidgetPosition: root.validCornerPosition(data.networkWidgetPosition, root.pluginSettings.networkWidgetPosition || "off"),
-      powerControlsPosition: root.validCornerPosition(data.powerControlsPosition, root.pluginSettings.powerControlsPosition || "off")
+      networkWidgetPosition: root.validCornerPosition(data.networkWidgetPosition, root.pluginSettings.networkWidgetPosition || "off")
     }
     root.pluginSettings = next
     pluginSettingsFile.setText(JSON.stringify(next, null, 2) + "\n")
