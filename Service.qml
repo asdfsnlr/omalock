@@ -21,6 +21,27 @@ Item {
   readonly property string settingsPath: configDir + "/settings.json"
   readonly property string legacyPluginDir: home + "/.config/omarchy/plugins/slanger.lock"
 
+  // ── Trusted Child Process Paths & Environments ─────────────────────────
+  // Every process this service launches uses a fixed, root-owned absolute
+  // path (never a bare command name resolved through the ambient PATH) and
+  // runs with clearEnvironment: true plus only the specific variables it
+  // actually needs -- this is a pre-authentication, always-loaded service,
+  // so a shadowed executable earlier in a compromised PATH must not be able
+  // to run automatically here.
+  readonly property string bashBin: "/usr/bin/bash"
+  readonly property string readlinkBin: "/usr/bin/readlink"
+  readonly property string hyprctlBin: "/usr/bin/hyprctl"
+  // Minimal PATH for bash -c helper scripts that shell out to sibling
+  // omarchy-* tools and coreutils by bare name -- root-owned dirs only.
+  readonly property string trustedSystemPath: "/usr/share/omarchy/bin:/usr/bin"
+  readonly property var sessionEnv: ({
+    "HOME": root.home,
+    "USER": root.userName,
+    "XDG_RUNTIME_DIR": Quickshell.env("XDG_RUNTIME_DIR") || "",
+    "HYPRLAND_INSTANCE_SIGNATURE": Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || ""
+  })
+  readonly property var bashHelperEnv: Object.assign({}, root.sessionEnv, { "PATH": root.trustedSystemPath })
+
   property var pluginSettings: ({
     albumArtPosition: "top",
     avatarPath: "",
@@ -519,7 +540,8 @@ Item {
 
   Process {
     id: readlinkProc
-    command: ["readlink", "-f", root.currentBackgroundLink]
+    command: [root.readlinkBin, "-f", root.currentBackgroundLink]
+    clearEnvironment: true
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
@@ -534,7 +556,9 @@ Item {
 
   Process {
     id: fingerprintCheckProc
-    command: ["bash", "-c", "if [[ -f /etc/pam.d/omarchy-lock-fingerprint ]] && command -v fprintd-list >/dev/null 2>&1 && fprintd-list \"$USER\" 2>/dev/null | grep -qi finger; then echo yes; else echo no; fi"]
+    command: [root.bashBin, "-c", "if [[ -f /etc/pam.d/omarchy-lock-fingerprint ]] && command -v fprintd-list >/dev/null 2>&1 && fprintd-list \"$USER\" 2>/dev/null | grep -qi finger; then echo yes; else echo no; fi"]
+    clearEnvironment: true
+    environment: root.bashHelperEnv
     stdout: StdioCollector { id: fingerprintCheckStdout; waitForEnd: true }
     onExited: {
       root.fingerprintConfigured = String(fingerprintCheckStdout.text || "").trim() === "yes"
@@ -545,7 +569,9 @@ Item {
 
   Process {
     id: strandedLockCheckProc
-    command: ["bash", "-c", "omarchy-hyprland-session-locked"]
+    command: [root.bashBin, "-c", "omarchy-hyprland-session-locked"]
+    clearEnvironment: true
+    environment: root.bashHelperEnv
     onExited: function(exitCode) {
       // No output to read the lock off yet.
       if (exitCode === 2) return
@@ -560,12 +586,16 @@ Item {
 
   Process {
     id: wakeProcess
-    command: ["bash", "-c", "omarchy-system-wake"]
+    command: [root.bashBin, "-c", "omarchy-system-wake"]
+    clearEnvironment: true
+    environment: root.bashHelperEnv
   }
 
   Process {
     id: blankProcess
-    command: ["bash", "-c", "omarchy-brightness-keyboard off; omarchy-brightness-display off"]
+    command: [root.bashBin, "-c", "omarchy-brightness-keyboard off; omarchy-brightness-display off"]
+    clearEnvironment: true
+    environment: root.bashHelperEnv
   }
 
   // Quickshell exposes no DPMS signal, so the panel state is polled while a
@@ -573,7 +603,9 @@ Item {
   // answer, so its optimistic state applies until the next poll confirms it.
   Process {
     id: monitorDpmsProcess
-    command: ["hyprctl", "monitors", "-j"]
+    command: [root.hyprctlBin, "monitors", "-j"]
+    clearEnvironment: true
+    environment: root.sessionEnv
     stdout: StdioCollector {
       onStreamFinished: root.applyMonitorDpms(text)
     }
@@ -697,6 +729,8 @@ Item {
   // existing install doesn't lose its configuration.
   Process {
     id: settingsMigrationProc
+    clearEnvironment: true
+    environment: root.bashHelperEnv
     onExited: pluginSettingsFile.reload()
   }
 
@@ -712,7 +746,7 @@ Item {
       "  new=" + JSON.stringify(root.configDir) + "/\"$f\"\n" +
       "  if [ ! -f \"$new\" ] && [ -f \"$old\" ]; then cp \"$old\" \"$new\"; fi\n" +
       "done"
-    settingsMigrationProc.command = ["bash", "-c", script]
+    settingsMigrationProc.command = [root.bashBin, "-c", script]
     settingsMigrationProc.running = true
   }
 

@@ -8,6 +8,11 @@ import "file:///usr/share/omarchy/shell/plugins/panels/weather/Model.js" as Weat
 Item {
   id: root
 
+  // Fixed, root-owned absolute path -- never resolved through the ambient
+  // PATH -- and clearEnvironment on every Process below, since curl needs
+  // no session state to fetch a URL.
+  readonly property string curlBin: "/usr/bin/curl"
+
   property bool hasWeather: false
   property string weatherGlyph: ""
   property string weatherTemp: ""
@@ -127,7 +132,7 @@ Item {
       + "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day"
       + "&forecast_days=4"
       + "&timezone=auto"
-    dailyForecastProc.command = ["curl", "-fsS", "--max-time", "5", url]
+    dailyForecastProc.command = [root.curlBin, "-fsS", "--max-time", "5", url]
     if (!dailyForecastProc.running) {
       dailyForecastProc.running = true
     }
@@ -135,6 +140,7 @@ Item {
 
   Process {
     id: dailyForecastProc
+    clearEnvironment: true
     stdout: StdioCollector {
       id: dailyForecastStdout
       waitForEnd: true
@@ -173,7 +179,8 @@ Item {
 
   Process {
     id: forecastProc
-    command: ["curl", "-fsS", "--max-time", "10", "https://wttr.in/" + root.locationQuery + "?format=j1"]
+    command: [root.curlBin, "-fsS", "--max-time", "10", "https://wttr.in/" + root.locationQuery + "?format=j1"]
+    clearEnvironment: true
     stdout: StdioCollector {
       id: forecastStdout
       waitForEnd: true
@@ -213,7 +220,8 @@ Item {
 
   Process {
     id: locationProc
-    command: ["curl", "-fsS", "--max-time", "4", "https://wttr.in/?format=%l"]
+    command: [root.curlBin, "-fsS", "--max-time", "4", "https://wttr.in/?format=%l"]
+    clearEnvironment: true
     stdout: StdioCollector {
       id: locationStdout
       waitForEnd: true

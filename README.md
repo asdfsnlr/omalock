@@ -16,7 +16,7 @@ A Quickshell lock screen plugin for Omarchy that replaces the stock password-onl
 - **Clock**: large, theme-colored clock with a configurable date/time format string, updated every second.
 - **Weather**: shares the exact same location source as Omarchy's own `omarchy.weather` bar widget (`~/.local/state/omarchy/settings/weather.json`, set via the weather bar widget or `omarchy-weather-location`). Uses Open-Meteo when coordinates are configured (fast) and falls back to wttr.in (by name or IP auto-detection) otherwise. Shows the resolved city name with a map-marker icon. Fails silently (hides itself) with no network.
 - **Avatar**: circular avatar image, selectable from a local file or a direct image URL (downloaded and cached locally, never re-fetched at lock time). Position: top, left, or right of the clock.
-- **Now Playing**: works with any MPRIS-compatible media player — Spotify, a YouTube Music PWA/browser extension that exposes MPRIS, VLC, mpv, Rhythmbox, and others — shown only while a session is active (hidden entirely otherwise). Track title/artist, a live progress bar, Play/Pause/Next/Previous controls (via the stock Omarchy MPRIS media service — no `playerctl` dependency), and the active player's real album art (cached locally, circular, with a generic music-note glyph fallback when no art is available). Album art position: top, left, or right of the controls.
+- **Now Playing**: works with any MPRIS-compatible media player — Spotify, a YouTube Music PWA/browser extension that exposes MPRIS, VLC, mpv, Rhythmbox, and others — shown only while a session is active (hidden entirely otherwise). Track title/artist, a live progress bar, Play/Pause/Next/Previous controls (via the stock Omarchy MPRIS media service — no `playerctl` dependency), and the active player's real album art when it's a local file path (circular, with a generic music-note glyph fallback otherwise). Album art position: top, left, or right of the controls.
 - **Network Status**: shows the active Wi-Fi (SSID + signal-strength icon, same thresholds as Omarchy's own network widget) or Ethernet (interface name) connection. Hidden when offline. Placeable in any screen corner.
 - **Theme-aware**: every color comes from the active Omarchy theme's `Color.lock.*` tokens — no hardcoded palette, no new theme files required.
 - **Settings Panel**: a dedicated in-shell settings window (menu: **Style → Omalock**, or `omarchy-shell asdfsnlr.omalock openSettings`) with a live preview pane that updates as you type, before you save.
@@ -24,7 +24,7 @@ A Quickshell lock screen plugin for Omarchy that replaces the stock password-onl
 ## Requirements & External Dependencies
 
 - **Omarchy Linux** (Quickshell-based shell with plugin support).
-- **`curl`** — used for weather (wttr.in / Open-Meteo), avatar-by-URL downloads, and album art downloads from the active MPRIS player. Ships with a stock Omarchy install.
+- **`curl`** — used for weather (wttr.in / Open-Meteo) and avatar-by-URL downloads. Ships with a stock Omarchy install.
 - **`zenity`** — optional, only used by the Settings panel's "Browse..." local file picker for the avatar. If absent, avatars can still be set by pasting a local path or an image URL directly.
 - **NetworkManager**, via Quickshell's built-in `Quickshell.Networking` module — required for the Network Status widget to detect Wi-Fi/Ethernet state. This is Omarchy's default network backend, so no extra setup is needed on a stock install.
 - **`jq`** — only needed for the optional `omalock` CLI tool (`bin/omalock`); the lock screen itself doesn't use it.
@@ -129,8 +129,8 @@ omalock help
 ## Data & Privacy
 
 - Weather requests go to `wttr.in` and `api.open-meteo.com` (no API key, no account); location is whatever is already configured for Omarchy's own weather widget.
-- Avatar/album-art URLs are downloaded once via `curl` and cached locally under `~/.config/omalock/` — nothing is re-fetched at lock time, and no raw URLs are persisted, only the local cache path.
-- Track/artist/art metadata comes entirely from the local MPRIS session of whatever player is active (via Omarchy's own stock media service) — nothing is sent anywhere.
+- An avatar URL you enter yourself in Settings is downloaded once via `curl` (to a random temp file, then atomically moved into place) and cached locally under `~/.config/omalock/` — nothing is re-fetched at lock time, and no raw URL is persisted, only the local cache path.
+- Track/artist/art metadata comes entirely from the local MPRIS session of whatever player is active (via Omarchy's own stock media service) — nothing is sent anywhere. Album art is only ever loaded from a local file path the player itself reports; a remote `http(s)://` art URL (which any MPRIS-capable app in your session could set, unauthenticated, since this runs on the lock screen) is never fetched automatically.
 - No user configuration outside `~/.config/omalock/settings.json` is ever written to. The plugin reads (never writes) the shared system weather location file.
 
 ## Running Checks

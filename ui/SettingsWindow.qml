@@ -64,6 +64,27 @@ PanelWindow {
   readonly property string pluginDir: Quickshell.env("HOME") + "/.config/omalock"
   readonly property string avatarCachePath: pluginDir + "/avatar-cache.png"
 
+  // ── Trusted Child Process Paths & Environments ─────────────────────────
+  readonly property string curlBin: "/usr/bin/curl"
+  readonly property string zenityBin: "/usr/bin/zenity"
+  readonly property string mvBin: "/usr/bin/mv"
+  readonly property string rmBin: "/usr/bin/rm"
+  readonly property var sessionEnv: ({
+    "HOME": Quickshell.env("HOME") || "",
+    "XDG_RUNTIME_DIR": Quickshell.env("XDG_RUNTIME_DIR") || "",
+    "WAYLAND_DISPLAY": Quickshell.env("WAYLAND_DISPLAY") || "",
+    "DBUS_SESSION_BUS_ADDRESS": Quickshell.env("DBUS_SESSION_BUS_ADDRESS") || ""
+  })
+
+  // A random, unguessable temp filename in the same directory as the final
+  // cache file, so the download can be written there and atomically renamed
+  // into place -- a predictable fixed path with a pre-placed symlink can no
+  // longer redirect the write, since `mv` replaces the destination's
+  // directory entry directly rather than following it.
+  function randomTempPath(finalPath) {
+    return finalPath + "." + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1e9).toString(36) + ".tmp"
+  }
+
   readonly property string effectiveFormAvatarPath: {
     var p = String(formAvatarPath || "").trim()
     if (!p) return ""
@@ -159,7 +180,9 @@ PanelWindow {
 
   Process {
     id: zenityPicker
-    command: ["zenity", "--file-selection", "--title=Select Avatar Image", "--file-filter=Images (*.png *.jpg *.jpeg *.webp *.svg) | *.png *.jpg *.jpeg *.webp *.svg *.PNG *.JPG *.JPEG *.WEBP *.SVG"]
+    command: [root.zenityBin, "--file-selection", "--title=Select Avatar Image", "--file-filter=Images (*.png *.jpg *.jpeg *.webp *.svg) | *.png *.jpg *.jpeg *.webp *.svg *.PNG *.JPG *.JPEG *.WEBP *.SVG"]
+    clearEnvironment: true
+    environment: root.sessionEnv
     stdout: StdioCollector {
       id: zenityStdout
       waitForEnd: true
@@ -177,9 +200,33 @@ PanelWindow {
     }
   }
 
+  // Downloads to a randomly named temp file, then atomically renames it
+  // into place (see moveDownloadIntoPlace / cleanupFailedDownload) instead
+  // of writing straight to the predictable avatarCachePath -- a symlink
+  // pre-placed at that fixed path can no longer redirect the write.
+  property string pendingDownloadTempPath: ""
+
   Process {
     id: urlDownloader
     command: []
+    clearEnvironment: true
+    onExited: function(code) {
+      if (code === 0) {
+        moveDownloadIntoPlace.command = [root.mvBin, "-T", root.pendingDownloadTempPath, root.avatarCachePath]
+        moveDownloadIntoPlace.running = true
+      } else {
+        cleanupFailedDownload.command = [root.rmBin, "-f", root.pendingDownloadTempPath]
+        cleanupFailedDownload.running = true
+        root.isDownloading = false
+        root.downloadError = true
+        root.downloadStatus = "Download failed. Please check the URL or connection."
+      }
+    }
+  }
+
+  Process {
+    id: moveDownloadIntoPlace
+    clearEnvironment: true
     onExited: function(code) {
       root.isDownloading = false
       if (code === 0) {
@@ -194,6 +241,11 @@ PanelWindow {
     }
   }
 
+  Process {
+    id: cleanupFailedDownload
+    clearEnvironment: true
+  }
+
   function startDownload() {
     var rawUrl = urlInput.text.trim()
     if (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) {
@@ -204,7 +256,8 @@ PanelWindow {
     downloadError = false
     downloadStatus = "Downloading image..."
     isDownloading = true
-    urlDownloader.command = ["curl", "-sL", "--fail", "--max-time", "15", "-o", root.avatarCachePath, rawUrl]
+    root.pendingDownloadTempPath = root.randomTempPath(root.avatarCachePath)
+    urlDownloader.command = [root.curlBin, "-sL", "--fail", "--max-time", "15", "-o", root.pendingDownloadTempPath, rawUrl]
     urlDownloader.running = true
   }
 

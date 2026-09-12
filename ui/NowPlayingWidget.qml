@@ -49,14 +49,11 @@ Item {
 
   // ---------------------------------------------------------------- Album Art
   readonly property int artSize: 64
-  readonly property string pluginDir: Quickshell.env("HOME") + "/.config/omalock"
-  readonly property string artCachePath: pluginDir + "/album-art-cache.png"
 
   property string currentTargetUrl: ""
   property string activeArtSource: ""
   property bool hasArt: false
   property bool artImageReady: false
-  property int cacheBuster: 0
 
   FileView {
     id: fallbackSettingsFile
@@ -87,23 +84,13 @@ Item {
 
   readonly property bool showAlbumArt: root.hasArt && root.artImageReady
 
-  Process {
-    id: artDownloader
-    property string pendingUrl: ""
-    command: []
-    onExited: function(code) {
-      if (code === 0 && pendingUrl === currentTargetUrl) {
-        root.cacheBuster += 1
-        root.activeArtSource = Util.fileUrl(root.artCachePath) + "?v=" + root.cacheBuster
-        root.hasArt = true
-      } else if (pendingUrl === currentTargetUrl) {
-        root.hasArt = false
-        root.artImageReady = false
-        root.activeArtSource = ""
-      }
-    }
-  }
-
+  // Deliberately local-only: mpris:artUrl/trackArtUrl is metadata reported
+  // by *any* MPRIS-capable player in the session (Spotify, a browser tab's
+  // extension, etc.) and updates automatically, unauthenticated, on the
+  // lock screen. Automatically fetching an attacker-chosen http(s):// URL
+  // from there would be an SSRF primitive reachable pre-login by anything
+  // in the session -- so only already-local image sources (a real file
+  // path the player points at) are ever loaded; remote URLs are ignored.
   function syncArt() {
     var raw = getPlayerArtUrl()
     if (raw === currentTargetUrl && hasArt) return
@@ -127,15 +114,6 @@ Item {
     if (raw.startsWith("/")) {
       activeArtSource = Util.fileUrl(raw)
       hasArt = true
-      return
-    }
-
-    if (raw.startsWith("http://") || raw.startsWith("https://")) {
-      hasArt = false
-      activeArtSource = ""
-      artDownloader.pendingUrl = raw
-      artDownloader.command = ["curl", "-sL", "--fail", "--max-time", "8", "-o", root.artCachePath, raw]
-      artDownloader.running = true
       return
     }
 
