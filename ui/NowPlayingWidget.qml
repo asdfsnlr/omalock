@@ -49,11 +49,56 @@ Item {
 
   // ---------------------------------------------------------------- Album Art
   readonly property int artSize: 64
+  readonly property string pluginDir: Quickshell.env("HOME") + "/.config/omalock"
+  readonly property string artCachePath: pluginDir + "/album-art-cache.png"
+  readonly property string bashBin: "/usr/bin/bash"
+
+  // The only hosts whose images are ever fetched, matched on a label
+  // boundary so a registered lookalike ("evilscdn.co") is never mistaken
+  // for a subdomain. mpris:artUrl/trackArtUrl is metadata reported by
+  // *any* MPRIS-capable player in the session and is read on the lock
+  // screen before authentication, so this list is the entire SSRF
+  // boundary: extend it only with hosts you'd trust to receive an
+  // automatic, unauthenticated request from this machine.
+  readonly property var artAllowedHosts: ["scdn.co"]
+
+  function artHostAllowed(host) {
+    for (var i = 0; i < root.artAllowedHosts.length; i++) {
+      var allowed = root.artAllowedHosts[i]
+      if (host === allowed) return true
+      var suffix = "." + allowed
+      if (host.length > suffix.length && host.slice(-suffix.length) === suffix) return true
+    }
+    return false
+  }
+
+  function artUnprintable(value) {
+    for (var i = 0; i < value.length; i++) {
+      var code = value.charCodeAt(i)
+      if (code <= 0x20 || code === 0x7f) return true
+    }
+    return false
+  }
+
+  // Null unless `raw` is an https:// URL on an allowed host with no
+  // userinfo/port (the oldest trick for making a URL read as a host it is
+  // not) -- the only shape this widget will ever ask curl to fetch.
+  function resolveRemoteArtUrl(raw) {
+    if (!raw || root.artUnprintable(raw)) return null
+    if (raw.indexOf("https://") !== 0) return null
+    var authority = raw.substring(8).split(/[/?#]/)[0]
+    if (!authority) return null
+    if (authority.indexOf("@") !== -1 || authority.indexOf(":") !== -1) return null
+    if (!root.artHostAllowed(authority.toLowerCase())) return null
+    return raw
+  }
 
   property string currentTargetUrl: ""
   property string activeArtSource: ""
   property bool hasArt: false
   property bool artImageReady: false
+  property int cacheBuster: 0
+  property string pendingArtUrl: ""
 
   FileView {
     id: fallbackSettingsFile
@@ -84,13 +129,60 @@ Item {
 
   readonly property bool showAlbumArt: root.hasArt && root.artImageReady
 
-  // Deliberately local-only: mpris:artUrl/trackArtUrl is metadata reported
-  // by *any* MPRIS-capable player in the session (Spotify, a browser tab's
-  // extension, etc.) and updates automatically, unauthenticated, on the
-  // lock screen. Automatically fetching an attacker-chosen http(s):// URL
-  // from there would be an SSRF primitive reachable pre-login by anything
-  // in the session -- so only already-local image sources (a real file
-  // path the player points at) are ever loaded; remote URLs are ignored.
+  // One shell script, run with the URL and destination as $1/$2 so neither
+  // ever reaches the command line as code. The host was already checked in
+  // resolveRemoteArtUrl(); this still does not trust the response: no
+  // redirects (a redirect would move the fetch off the host that was
+  // checked), a hard size cap, and the format is read from the magic bytes
+  // rather than trusted from a header or file extension. The download lands
+  // in a randomly named temp file next to the destination and is `mv`'d
+  // into place, so a symlink pre-placed at the fixed cache path can't
+  // redirect the write.
+  function artFetchScript() {
+    return [
+      "set -eu",
+      "src=\"$1\"",
+      "dest=\"$2\"",
+      "max=8000000",
+      "mkdir -p \"$(dirname -- \"$dest\")\" || exit 1",
+      "tmp=$(mktemp \"${dest}.XXXXXX\") || exit 1",
+      "trap 'rm -f \"$tmp\"' EXIT",
+      "curl -sf --proto \"=https\" --max-redirs 0 --max-filesize \"$max\" --max-time 8 -o \"$tmp\" -- \"$src\" || exit 1",
+      "size=$(wc -c < \"$tmp\") || exit 1",
+      "[ \"$size\" -gt 0 ] && [ \"$size\" -le \"$max\" ] || exit 1",
+      "sig=$(od -An -v -tx1 -N16 \"$tmp\" | tr -d ' \\n') || exit 1",
+      "case \"$sig\" in",
+      "  ffd8ff*|89504e470d0a1a0a*|474946383961*|474946383761*|424d*|52494646????????57454250*) ;;",
+      "  *) exit 1 ;;",
+      "esac",
+      "mv -f \"$tmp\" \"$dest\""
+    ].join("\n")
+  }
+
+  Process {
+    id: artDownloader
+    clearEnvironment: true
+    environment: ({ "PATH": "/usr/bin" })
+    onExited: function(code) {
+      if (code === 0 && root.pendingArtUrl === root.currentTargetUrl) {
+        root.cacheBuster += 1
+        root.activeArtSource = Util.fileUrl(root.artCachePath) + "?v=" + root.cacheBuster
+        root.hasArt = true
+      } else if (root.pendingArtUrl === root.currentTargetUrl) {
+        root.hasArt = false
+        root.artImageReady = false
+        root.activeArtSource = ""
+      }
+    }
+  }
+
+  // mpris:artUrl/trackArtUrl is metadata reported by *any* MPRIS-capable
+  // player in the session (Spotify, a browser tab's extension, etc.) and
+  // updates automatically, unauthenticated, on the lock screen. A remote
+  // URL is only ever fetched when resolveRemoteArtUrl() accepts it (https,
+  // no userinfo/port, host on the allowlist) and only through the bounded
+  // script above -- everything else (including plain http://, or https to
+  // a non-allowed host) is ignored rather than fetched.
   function syncArt() {
     var raw = getPlayerArtUrl()
     if (raw === currentTargetUrl && hasArt) return
@@ -114,6 +206,17 @@ Item {
     if (raw.startsWith("/")) {
       activeArtSource = Util.fileUrl(raw)
       hasArt = true
+      return
+    }
+
+    var remote = root.resolveRemoteArtUrl(raw)
+    if (remote) {
+      hasArt = false
+      activeArtSource = ""
+      root.pendingArtUrl = remote
+      if (artDownloader.running) artDownloader.running = false
+      artDownloader.command = [root.bashBin, "-c", root.artFetchScript(), "art-fetch", remote, root.artCachePath]
+      artDownloader.running = true
       return
     }
 
