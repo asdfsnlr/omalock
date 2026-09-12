@@ -1,0 +1,8 @@
+.idea/
+.vscode/
+
+# Runtime state now lives in ~/.config/omalock/, never in the plugin
+# directory itself — these are defensive in case an older build writes here.
+settings.json
+avatar-cache.png
+album-art-cache.png

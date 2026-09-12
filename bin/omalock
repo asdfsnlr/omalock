@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+#
+# omalock - configure the OmaLock lock screen plugin from the terminal.
+#
+# Reads and writes the same ~/.config/omalock/settings.json the in-shell
+# Settings panel uses (Quickshell.Io.FileView watches it and reloads on
+# change), so a `omalock set ...` from a script takes effect immediately.
+set -euo pipefail
+
+CONFIG_DIR="${HOME}/.config/omalock"
+SETTINGS_FILE="${CONFIG_DIR}/settings.json"
+PLUGIN_ID="asdfsnlr.omalock"
+
+DEFAULTS='{
+  "albumArtPosition": "top",
+  "avatarPath": "",
+  "avatarPosition": "top",
+  "dateFormat": "dddd, MMMM d",
+  "timeFormat": "h:mm AP",
+  "weatherLocation": "",
+  "weatherUnit": "auto",
+  "networkWidgetPosition": "off",
+  "powerControlsPosition": "off"
+}'
+
+VALID_KEYS=(albumArtPosition avatarPath avatarPosition dateFormat timeFormat weatherUnit networkWidgetPosition powerControlsPosition)
+
+usage() {
+  cat <<'EOF'
+omalock - configure the OmaLock lock screen plugin from the terminal
+
+Usage:
+  omalock list                  Show all current settings as JSON
+  omalock get <key>             Print the value of one setting
+  omalock set <key> <value>     Set one setting (validated)
+  omalock open                  Open the in-shell Settings panel
+  omalock preview               Preview the lock screen with current settings
+  omalock help                  Show this help
+
+Keys:
+  avatarPath              path to a local image, or "" for none
+  avatarPosition           top | left | right
+  albumArtPosition         top | left | right     (now-playing album art)
+  dateFormat               Qt date format string   (e.g. "dddd, MMMM d")
+  timeFormat               Qt time format string    (e.g. "h:mm AP")
+  weatherUnit               auto | metric | imperial
+  networkWidgetPosition     off | top-left | top-right | bottom-left | bottom-right
+  powerControlsPosition     off | top-left | top-right | bottom-left | bottom-right
+
+Weather location isn't set here — it follows Omarchy's own weather widget.
+Use `omarchy-weather-location` to change it.
+
+Examples:
+  omalock set avatarPosition left
+  omalock set networkWidgetPosition top-right
+  omalock get weatherUnit
+  omalock list
+EOF
+}
+
+require_jq() {
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "omalock: this command needs jq (try: sudo pacman -S jq)" >&2
+    exit 1
+  fi
+}
+
+ensure_settings_file() {
+  mkdir -p "$CONFIG_DIR"
+  if [[ ! -f "$SETTINGS_FILE" ]]; then
+    echo "$DEFAULTS" | jq '.' > "$SETTINGS_FILE"
+  fi
+}
+
+is_valid_key() {
+  local key="$1"
+  for k in "${VALID_KEYS[@]}"; do
+    [[ "$k" == "$key" ]] && return 0
+  done
+  return 1
+}
+
+cmd_list() {
+  require_jq
+  ensure_settings_file
+  jq '.' "$SETTINGS_FILE"
+}
+
+cmd_get() {
+  require_jq
+  ensure_settings_file
+  local key="${1:-}"
+  if [[ -z "$key" ]]; then
+    echo "usage: omalock get <key>" >&2
+    exit 2
+  fi
+  if ! is_valid_key "$key"; then
+    echo "omalock: unknown key '$key'. Run 'omalock help' for the list." >&2
+    exit 2
+  fi
+  jq -r --arg k "$key" '.[$k]' "$SETTINGS_FILE"
+}
+
+cmd_set() {
+  require_jq
+  ensure_settings_file
+  local key="${1:-}"
+  local value="${2:-}"
+  if [[ -z "$key" || $# -lt 2 ]]; then
+    echo "usage: omalock set <key> <value>" >&2
+    exit 2
+  fi
+  if ! is_valid_key "$key"; then
+    echo "omalock: unknown key '$key'. Run 'omalock help' for the list." >&2
+    exit 2
+  fi
+
+  case "$key" in
+    avatarPosition|albumArtPosition)
+      case "$value" in
+        top|left|right) ;;
+        *) echo "omalock: $key must be one of: top, left, right" >&2; exit 2 ;;
+      esac
+      ;;
+    weatherUnit)
+      case "$value" in
+        auto|metric|imperial) ;;
+        *) echo "omalock: weatherUnit must be one of: auto, metric, imperial" >&2; exit 2 ;;
+      esac
+      ;;
+    networkWidgetPosition|powerControlsPosition)
+      case "$value" in
+        off|top-left|top-right|bottom-left|bottom-right) ;;
+        *) echo "omalock: $key must be one of: off, top-left, top-right, bottom-left, bottom-right" >&2; exit 2 ;;
+      esac
+      ;;
+  esac
+
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg k "$key" --arg v "$value" '.[$k] = $v' "$SETTINGS_FILE" > "$tmp" && mv "$tmp" "$SETTINGS_FILE"
+  echo "omalock: set $key = $value"
+}
+
+cmd_open() {
+  omarchy-shell "$PLUGIN_ID" openSettings
+}
+
+cmd_preview() {
+  omarchy-shell lock preview
+}
+
+main() {
+  local cmd="${1:-help}"
+  shift || true
+  case "$cmd" in
+    list) cmd_list ;;
+    get) cmd_get "$@" ;;
+    set) cmd_set "$@" ;;
+    open) cmd_open ;;
+    preview) cmd_preview ;;
+    help|-h|--help) usage ;;
+    *)
+      echo "omalock: unknown command '$cmd'" >&2
+      usage
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"

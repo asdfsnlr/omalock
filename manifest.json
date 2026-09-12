@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "asdfsnlr.omalock",
+  "name": "OmaLock",
+  "version": "1.0.0",
+  "author": "asdfsnlr",
+  "description": "Quickshell session lock customization",
+  "omarchy": {
+    "capabilities": [
+      "authentication"
+    ],
+    "clonedFrom": "omarchy.lock"
+  },
+  "kinds": [
+    "service"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml"
+  }
+}
