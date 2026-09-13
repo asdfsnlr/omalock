@@ -15,7 +15,9 @@ PanelWindow {
   // Form properties
   property string formAvatarPath: ""
   property string avatarPosition: "top" // "top" | "left" | "right"
+  property string avatarShape: "circle" // "circle" | "square"
   property string albumArtPosition: "top" // "top" | "left" | "right"
+  property string albumArtShape: "circle" // "circle" | "square"
   property string avatarMode: "file" // "file" | "url"
   property string weatherUnit: "auto" // "auto" | "metric" | "imperial"
   property string networkWidgetPosition: "off" // "off" | "top-left" | "top-right" | "bottom-left" | "bottom-right"
@@ -139,6 +141,8 @@ PanelWindow {
     albumArtPosition = (pluginSettings.albumArtPosition === "left" || pluginSettings.albumArtPosition === "right" || pluginSettings.albumArtPosition === "top")
       ? pluginSettings.albumArtPosition
       : "top"
+    avatarShape = (pluginSettings.avatarShape === "square") ? "square" : "circle"
+    albumArtShape = (pluginSettings.albumArtShape === "square") ? "square" : "circle"
     dateInput.text = pluginSettings.dateFormat || "dddd, MMMM d"
     timeInput.text = pluginSettings.timeFormat || "h:mm AP"
     weatherUnit = (pluginSettings.weatherUnit === "metric" || pluginSettings.weatherUnit === "imperial" || pluginSettings.weatherUnit === "auto")
@@ -164,7 +168,9 @@ PanelWindow {
     var data = {
       avatarPath: root.effectiveFormAvatarPath,
       avatarPosition: root.avatarPosition,
+      avatarShape: root.avatarShape,
       albumArtPosition: root.albumArtPosition,
+      albumArtShape: root.albumArtShape,
       dateFormat: dateInput.text.trim() || "dddd, MMMM d",
       timeFormat: timeInput.text.trim() || "h:mm AP",
       weatherLocation: root.pluginSettings ? (root.pluginSettings.weatherLocation || "") : "",
@@ -683,6 +689,58 @@ PanelWindow {
           }
         }
 
+        // Avatar Shape Selector
+        Column {
+          width: parent.width
+          spacing: Style.space(4)
+
+          Text {
+            text: "Avatar Shape"
+            color: Color.lock.text
+            font.family: Style.font.family
+            font.pixelSize: Style.font.body
+            font.bold: true
+          }
+
+          Row {
+            spacing: Style.space(8)
+
+            Repeater {
+              model: [
+                { key: "circle", label: "Circle" },
+                { key: "square", label: "Square" }
+              ]
+
+              delegate: BorderSurface {
+                id: avatarShapeBtn
+                readonly property bool isSelected: root.avatarShape === modelData.key
+                width: 155
+                height: 32
+                radius: Style.cornerRadius
+                color: isSelected ? Util.alpha(Color.lock.borderActive, 0.25) : (avatarShapeMouse.containsMouse ? Util.alpha(Color.lock.border, 0.15) : Color.lock.background)
+                borderSpec: Border.surfaceSpec("lock", isSelected ? "border-active" : "border", isSelected ? Color.lock.borderActive : Color.lock.border, isSelected ? 2 : 1, "border-alpha")
+
+                Text {
+                  anchors.centerIn: parent
+                  text: modelData.label
+                  color: avatarShapeBtn.isSelected ? Color.lock.text : Color.lock.placeholder
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.bodySmall
+                  font.bold: avatarShapeBtn.isSelected
+                }
+
+                MouseArea {
+                  id: avatarShapeMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.avatarShape = modelData.key
+                }
+              }
+            }
+          }
+        }
+
         // Album Art Position Selector
         Column {
           width: parent.width
@@ -741,6 +799,58 @@ PanelWindow {
                   hoverEnabled: true
                   cursorShape: Qt.PointingHandCursor
                   onClicked: root.albumArtPosition = modelData.key
+                }
+              }
+            }
+          }
+        }
+
+        // Album Art Shape Selector
+        Column {
+          width: parent.width
+          spacing: Style.space(4)
+
+          Text {
+            text: "Album Art Shape"
+            color: Color.lock.text
+            font.family: Style.font.family
+            font.pixelSize: Style.font.body
+            font.bold: true
+          }
+
+          Row {
+            spacing: Style.space(8)
+
+            Repeater {
+              model: [
+                { key: "circle", label: "Circle" },
+                { key: "square", label: "Square" }
+              ]
+
+              delegate: BorderSurface {
+                id: albumArtShapeBtn
+                readonly property bool isSelected: root.albumArtShape === modelData.key
+                width: 155
+                height: 32
+                radius: Style.cornerRadius
+                color: isSelected ? Util.alpha(Color.lock.borderActive, 0.25) : (albumArtShapeMouse.containsMouse ? Util.alpha(Color.lock.border, 0.15) : Color.lock.background)
+                borderSpec: Border.surfaceSpec("lock", isSelected ? "border-active" : "border", isSelected ? Color.lock.borderActive : Color.lock.border, isSelected ? 2 : 1, "border-alpha")
+
+                Text {
+                  anchors.centerIn: parent
+                  text: modelData.label
+                  color: albumArtShapeBtn.isSelected ? Color.lock.text : Color.lock.placeholder
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.bodySmall
+                  font.bold: albumArtShapeBtn.isSelected
+                }
+
+                MouseArea {
+                  id: albumArtShapeMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.albumArtShape = modelData.key
                 }
               }
             }
@@ -1183,7 +1293,7 @@ PanelWindow {
                   anchors.fill: parent
                   visible: false
                   layer.enabled: true
-                  Rectangle { anchors.fill: parent; radius: width / 2; color: "black" }
+                  Rectangle { anchors.fill: parent; radius: root.avatarShape === "square" ? Style.cornerRadius : (width / 2); color: "black" }
                 }
 
                 Image {
@@ -1206,7 +1316,7 @@ PanelWindow {
 
                 Rectangle {
                   anchors.fill: parent
-                  radius: width / 2
+                  radius: root.avatarShape === "square" ? Style.cornerRadius : (width / 2)
                   color: "transparent"
                   border.color: Util.alpha(Color.lock.border, 0.5)
                   border.width: 1
@@ -1230,7 +1340,7 @@ PanelWindow {
                     anchors.fill: parent
                     visible: false
                     layer.enabled: true
-                    Rectangle { anchors.fill: parent; radius: width / 2; color: "black" }
+                    Rectangle { anchors.fill: parent; radius: root.avatarShape === "square" ? Style.cornerRadius : (width / 2); color: "black" }
                   }
 
                   Image {
@@ -1253,7 +1363,7 @@ PanelWindow {
 
                   Rectangle {
                     anchors.fill: parent
-                    radius: width / 2
+                    radius: root.avatarShape === "square" ? Style.cornerRadius : (width / 2)
                     color: "transparent"
                     border.color: Util.alpha(Color.lock.border, 0.5)
                     border.width: 1
@@ -1317,7 +1427,7 @@ PanelWindow {
                     anchors.fill: parent
                     visible: false
                     layer.enabled: true
-                    Rectangle { anchors.fill: parent; radius: width / 2; color: "black" }
+                    Rectangle { anchors.fill: parent; radius: root.avatarShape === "square" ? Style.cornerRadius : (width / 2); color: "black" }
                   }
 
                   Image {
@@ -1340,7 +1450,7 @@ PanelWindow {
 
                   Rectangle {
                     anchors.fill: parent
-                    radius: width / 2
+                    radius: root.avatarShape === "square" ? Style.cornerRadius : (width / 2)
                     color: "transparent"
                     border.color: Util.alpha(Color.lock.border, 0.5)
                     border.width: 1
@@ -1375,6 +1485,7 @@ PanelWindow {
               width: parent.width * 0.72
               mediaService: root.mediaService
               albumArtPosition: root.albumArtPosition
+              albumArtShape: root.albumArtShape
             }
           }
 

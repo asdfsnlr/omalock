@@ -9,9 +9,13 @@ Item {
 
   property string avatarPath: ""
   property string localAvatarPath: ""
+  property string shape: ""
+  property string localShape: ""
 
   readonly property string activeAvatarPath: avatarPath ? avatarPath : localAvatarPath
-  readonly property int avatarSize: Style.space(72)
+  readonly property int avatarSize: Style.space(92)
+  readonly property string effectiveShape: (shape || localShape || "circle")
+  readonly property real shapeRadius: effectiveShape === "square" ? Style.cornerRadius : (avatarSize / 2)
 
   readonly property string effectivePath: {
     var p = String(activeAvatarPath || "").trim()
@@ -38,6 +42,7 @@ Item {
       try {
         var d = JSON.parse(text())
         if (d && d.avatarPath !== undefined) root.localAvatarPath = String(d.avatarPath)
+        if (d && d.avatarShape !== undefined) root.localShape = String(d.avatarShape)
       } catch (e) {}
     }
     onFileChanged: reload()
@@ -58,7 +63,7 @@ Item {
 
       Rectangle {
         anchors.fill: parent
-        radius: width / 2
+        radius: root.shapeRadius
         color: "black"
       }
     }
@@ -84,7 +89,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      radius: width / 2
+      radius: root.shapeRadius
       color: "transparent"
       border.color: Util.alpha(Color.lock.border, 0.4)
       border.width: 1

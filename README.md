@@ -15,8 +15,8 @@ A Quickshell lock screen plugin for Omarchy that replaces the stock password-onl
 
 - **Clock**: large, theme-colored clock with a configurable date/time format string, updated every second.
 - **Weather**: shares the exact same location source as Omarchy's own `omarchy.weather` bar widget (`~/.local/state/omarchy/settings/weather.json`, set via the weather bar widget or `omarchy-weather-location`). Uses Open-Meteo when coordinates are configured (fast) and falls back to wttr.in (by name or IP auto-detection) otherwise. Shows the resolved city name with a map-marker icon. Fails silently (hides itself) with no network.
-- **Avatar**: circular avatar image, selectable from a local file or a direct image URL (downloaded and cached locally, never re-fetched at lock time). Position: top, left, or right of the clock.
-- **Now Playing**: works with any MPRIS-compatible media player — Spotify, a YouTube Music PWA/browser extension that exposes MPRIS, VLC, mpv, Rhythmbox, and others — shown only while a session is active (hidden entirely otherwise). Track title/artist, a live progress bar, Play/Pause/Next/Previous controls (via the stock Omarchy MPRIS media service — no `playerctl` dependency), and the active player's real album art (circular, with a generic music-note glyph fallback when no art is available). A local file path the player reports is shown directly; a remote art URL is only fetched from a small allowlist of known cover-art CDNs (currently Spotify's `scdn.co`) over a bounded, redirect-free `https://` request — see **Data & Privacy** below. Album art position: top, left, or right of the controls.
+- **Avatar**: avatar image, selectable from a local file or a direct image URL (downloaded and cached locally, never re-fetched at lock time). Position: top, left, or right of the clock. Shape: circle or square.
+- **Now Playing**: works with any MPRIS-compatible media player — Spotify, a YouTube Music PWA/browser extension that exposes MPRIS, VLC, mpv, Rhythmbox, and others — shown only while a session is active (hidden entirely otherwise). Track title/artist, a live progress bar, Play/Pause/Next/Previous controls (via the stock Omarchy MPRIS media service — no `playerctl` dependency), and the active player's real album art (circle or square, with a generic music-note glyph fallback when no art is available). A local file path the player reports is shown directly; a remote art URL is only fetched from a small allowlist of known cover-art CDNs (currently Spotify's `scdn.co`) over a bounded, redirect-free `https://` request — see **Data & Privacy** below. Album art position: top, left, or right of the controls.
 - **Network Status**: shows the active Wi-Fi (SSID + signal-strength icon, same thresholds as Omarchy's own network widget) or Ethernet (interface name) connection. Hidden when offline. Placeable in any screen corner.
 - **Theme-aware**: every color comes from the active Omarchy theme's `Color.lock.*` tokens — no hardcoded palette, no new theme files required.
 - **Settings Panel**: a dedicated in-shell settings window (menu: **Style → Omalock**, or `omarchy-shell asdfsnlr.omalock openSettings`) with a live preview pane that updates as you type, before you save.
@@ -77,7 +77,7 @@ Removing the plugin does not touch PAM/fingerprint configuration or any other Om
 
 All settings are stored in `~/.config/omalock/settings.json` — separate from the plugin's own source directory, so a plugin update never touches it — and are edited from the in-shell **Settings** panel; there is no manual JSON editing required. (An existing install that still has a `settings.json` under the old `~/.config/omarchy/plugins/<id>/` location is migrated automatically, once, the first time this version loads.)
 
-- **Avatar**: local file path or image URL, and position (Top / Left / Right).
+- **Avatar**: local file path or image URL, position (Top / Left / Right), and shape (Circle / Square).
 - **Album Art Position**: Top / Left / Right, relative to the now-playing controls.
 - **Date Format** / **Time Format**: `Qt.formatDate` / `Qt.formatTime` pattern strings (e.g. `dddd, MMMM d`, `h:mm AP`).
 - **Weather Location**: read-only in this plugin — it mirrors whatever location is configured for the system's own weather widget (`omarchy-weather-location` or the weather bar widget's own location editor), so both stay in sync automatically.
@@ -109,7 +109,9 @@ omalock get avatarPosition
 
 # Set a setting (validated against the same choices as the Settings panel)
 omalock set avatarPosition left
+omalock set avatarShape square
 omalock set albumArtPosition right
+omalock set albumArtShape square
 omalock set weatherUnit metric
 omalock set networkWidgetPosition top-right
 omalock set dateFormat "yyyy-MM-dd"

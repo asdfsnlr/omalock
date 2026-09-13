@@ -44,8 +44,10 @@ Item {
 
   property var pluginSettings: ({
     albumArtPosition: "top",
+    albumArtShape: "circle",
     avatarPath: "",
     avatarPosition: "top",
+    avatarShape: "circle",
     dateFormat: "dddd, MMMM d",
     timeFormat: "h:mm AP",
     weatherLocation: "",
@@ -61,11 +63,17 @@ Item {
     return (root.cornerPositions.indexOf(value) !== -1) ? value : fallback
   }
 
+  function validShape(value, fallback) {
+    return (value === "circle" || value === "square") ? value : fallback
+  }
+
   function loadPluginSettings(raw) {
     var defaults = {
       albumArtPosition: "top",
+      albumArtShape: "circle",
       avatarPath: "",
       avatarPosition: "top",
+      avatarShape: "circle",
       dateFormat: "dddd, MMMM d",
       timeFormat: "h:mm AP",
       weatherLocation: "",
@@ -80,8 +88,10 @@ Item {
       var data = JSON.parse(raw)
       root.pluginSettings = {
         albumArtPosition: (data && (data.albumArtPosition === "left" || data.albumArtPosition === "right" || data.albumArtPosition === "top")) ? data.albumArtPosition : defaults.albumArtPosition,
+        albumArtShape: (data && data.albumArtShape !== undefined) ? root.validShape(data.albumArtShape, defaults.albumArtShape) : defaults.albumArtShape,
         avatarPath: (data && data.avatarPath !== undefined) ? String(data.avatarPath) : defaults.avatarPath,
         avatarPosition: (data && (data.avatarPosition === "left" || data.avatarPosition === "right" || data.avatarPosition === "top")) ? data.avatarPosition : defaults.avatarPosition,
+        avatarShape: (data && data.avatarShape !== undefined) ? root.validShape(data.avatarShape, defaults.avatarShape) : defaults.avatarShape,
         dateFormat: (data && data.dateFormat !== undefined && String(data.dateFormat).trim() !== "") ? String(data.dateFormat) : defaults.dateFormat,
         timeFormat: (data && data.timeFormat !== undefined && String(data.timeFormat).trim() !== "") ? String(data.timeFormat) : defaults.timeFormat,
         weatherLocation: (data && data.weatherLocation !== undefined) ? String(data.weatherLocation) : defaults.weatherLocation,
@@ -96,8 +106,10 @@ Item {
   function savePluginSettings(data) {
     var next = {
       albumArtPosition: (data.albumArtPosition === "left" || data.albumArtPosition === "right" || data.albumArtPosition === "top") ? data.albumArtPosition : (root.pluginSettings.albumArtPosition || "top"),
+      albumArtShape: root.validShape(data.albumArtShape, root.pluginSettings.albumArtShape || "circle"),
       avatarPath: data.avatarPath !== undefined ? String(data.avatarPath) : root.pluginSettings.avatarPath,
       avatarPosition: (data.avatarPosition === "left" || data.avatarPosition === "right" || data.avatarPosition === "top") ? data.avatarPosition : (root.pluginSettings.avatarPosition || "top"),
+      avatarShape: root.validShape(data.avatarShape, root.pluginSettings.avatarShape || "circle"),
       dateFormat: (data.dateFormat !== undefined && String(data.dateFormat).trim() !== "") ? String(data.dateFormat) : "dddd, MMMM d",
       timeFormat: (data.timeFormat !== undefined && String(data.timeFormat).trim() !== "") ? String(data.timeFormat) : "h:mm AP",
       weatherLocation: data.weatherLocation !== undefined ? String(data.weatherLocation) : root.pluginSettings.weatherLocation,

@@ -16,11 +16,15 @@ Item {
   property var mediaService: null
   property string albumArtPosition: ""
   property string localAlbumArtPosition: ""
+  property string albumArtShape: ""
+  property string localAlbumArtShape: ""
 
   readonly property string effectiveAlbumArtPosition: {
     var pos = (albumArtPosition || localAlbumArtPosition || "top").trim().toLowerCase()
     return (pos === "left" || pos === "right" || pos === "top") ? pos : "top"
   }
+
+  readonly property string effectiveAlbumArtShape: (albumArtShape || localAlbumArtShape || "circle")
 
   readonly property var activePlayer: mediaService ? mediaService.activePlayer : null
   readonly property bool hasPlayer: activePlayer !== null
@@ -49,6 +53,7 @@ Item {
 
   // ---------------------------------------------------------------- Album Art
   readonly property int artSize: 64
+  readonly property real artShapeRadius: effectiveAlbumArtShape === "square" ? Style.cornerRadius : (artSize / 2)
   readonly property string pluginDir: Quickshell.env("HOME") + "/.config/omalock"
   readonly property string artCachePath: pluginDir + "/album-art-cache.png"
   readonly property string bashBin: "/usr/bin/bash"
@@ -109,6 +114,7 @@ Item {
       try {
         var d = JSON.parse(text())
         if (d && d.albumArtPosition) root.localAlbumArtPosition = String(d.albumArtPosition)
+        if (d && d.albumArtShape) root.localAlbumArtShape = String(d.albumArtShape)
       } catch (e) {}
     }
     onFileChanged: reload()
@@ -338,7 +344,7 @@ Item {
 
         Rectangle {
           anchors.fill: parent
-          radius: width / 2
+          radius: root.artShapeRadius
           color: Util.alpha(Color.lock.background, 0.5)
           border.color: Util.alpha(Color.lock.border, 0.35)
           border.width: 1
@@ -368,7 +374,7 @@ Item {
 
           Rectangle {
             anchors.fill: parent
-            radius: width / 2
+            radius: root.artShapeRadius
             color: "black"
           }
         }
@@ -400,7 +406,7 @@ Item {
 
         Rectangle {
           anchors.fill: parent
-          radius: width / 2
+          radius: root.artShapeRadius
           color: "transparent"
           border.color: Util.alpha(Color.lock.border, 0.4)
           border.width: 1

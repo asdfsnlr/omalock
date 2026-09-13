@@ -245,6 +245,7 @@ Item {
         visible: (root.avatarPosition === "top") && hasAvatar
         anchors.horizontalCenter: parent.horizontalCenter
         avatarPath: (root.avatarPosition === "top") ? root.effectiveAvatarPath : ""
+        shape: root.pluginSettings ? (root.pluginSettings.avatarShape || "circle") : "circle"
       }
 
       Row {
@@ -257,6 +258,7 @@ Item {
           visible: (root.avatarPosition === "left") && hasAvatar
           anchors.verticalCenter: parent.verticalCenter
           avatarPath: (root.avatarPosition === "left") ? root.effectiveAvatarPath : ""
+          shape: root.pluginSettings ? (root.pluginSettings.avatarShape || "circle") : "circle"
         }
 
         Column {
@@ -282,6 +284,7 @@ Item {
           visible: (root.avatarPosition === "right") && hasAvatar
           anchors.verticalCenter: parent.verticalCenter
           avatarPath: (root.avatarPosition === "right") ? root.effectiveAvatarPath : ""
+          shape: root.pluginSettings ? (root.pluginSettings.avatarShape || "circle") : "circle"
         }
       }
     }
@@ -294,6 +297,7 @@ Item {
       width: root.fieldWidth
       mediaService: root.mediaService
       albumArtPosition: (root.pluginSettings && root.pluginSettings.albumArtPosition) ? root.pluginSettings.albumArtPosition : "top"
+      albumArtShape: (root.pluginSettings && root.pluginSettings.albumArtShape) ? root.pluginSettings.albumArtShape : "circle"
     }
 
     // One Row per screen corner. Each corner widget reparents itself into

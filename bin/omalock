@@ -13,8 +13,10 @@ PLUGIN_ID="asdfsnlr.omalock"
 
 DEFAULTS='{
   "albumArtPosition": "top",
+  "albumArtShape": "circle",
   "avatarPath": "",
   "avatarPosition": "top",
+  "avatarShape": "circle",
   "dateFormat": "dddd, MMMM d",
   "timeFormat": "h:mm AP",
   "weatherLocation": "",
@@ -22,7 +24,7 @@ DEFAULTS='{
   "networkWidgetPosition": "off"
 }'
 
-VALID_KEYS=(albumArtPosition avatarPath avatarPosition dateFormat timeFormat weatherUnit networkWidgetPosition)
+VALID_KEYS=(albumArtPosition albumArtShape avatarPath avatarPosition avatarShape dateFormat timeFormat weatherUnit networkWidgetPosition)
 
 usage() {
   cat <<'EOF'
@@ -39,7 +41,9 @@ Usage:
 Keys:
   avatarPath              path to a local image, or "" for none
   avatarPosition           top | left | right
+  avatarShape              circle | square
   albumArtPosition         top | left | right     (now-playing album art)
+  albumArtShape            circle | square        (now-playing album art)
   dateFormat               Qt date format string   (e.g. "dddd, MMMM d")
   timeFormat               Qt time format string    (e.g. "h:mm AP")
   weatherUnit               auto | metric | imperial
@@ -118,6 +122,12 @@ cmd_set() {
       case "$value" in
         top|left|right) ;;
         *) echo "omalock: $key must be one of: top, left, right" >&2; exit 2 ;;
+      esac
+      ;;
+    avatarShape|albumArtShape)
+      case "$value" in
+        circle|square) ;;
+        *) echo "omalock: $key must be one of: circle, square" >&2; exit 2 ;;
       esac
       ;;
     weatherUnit)
