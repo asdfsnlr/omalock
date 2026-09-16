@@ -121,12 +121,20 @@ Item {
   }
 
   function getPlayerArtUrl() {
-    if (!hasPlayer) return ""
+    // Capture into a local instead of re-reading the live activePlayer property
+    // for each access below: the underlying MPRIS player can be torn down (the
+    // Mpris watcher unregistering it) between one property read and the next,
+    // and a stale reference dereferenced after that has crashed the whole
+    // shell process (SIGSEGV), not just thrown a catchable QML TypeError —
+    // reproduced live, correlated across every crash report so far with a
+    // player disappearing right as this widget touched activePlayer.<field>.
+    var p = activePlayer
+    if (!p) return ""
     var url = ""
-    if (activePlayer.trackArtUrl) {
-      url = String(activePlayer.trackArtUrl)
-    } else if (activePlayer.metadata && activePlayer.metadata["mpris:artUrl"]) {
-      url = String(activePlayer.metadata["mpris:artUrl"])
+    if (p.trackArtUrl) {
+      url = String(p.trackArtUrl)
+    } else if (p.metadata && p.metadata["mpris:artUrl"]) {
+      url = String(p.metadata["mpris:artUrl"])
     }
     return url ? url.trim() : ""
   }
@@ -232,31 +240,34 @@ Item {
 
   // ------------------------------------------------------------- Transport Controls
   function playPause() {
-    if (!hasPlayer) return
-    if (activePlayer.canTogglePlaying !== false) {
-      activePlayer.togglePlaying()
-    } else if (isPlaying && activePlayer.canPause !== false) {
-      activePlayer.pause()
-    } else if (!isPlaying && activePlayer.canPlay !== false) {
-      activePlayer.play()
+    var p = activePlayer
+    if (!p) return
+    if (p.canTogglePlaying !== false) {
+      p.togglePlaying()
+    } else if (isPlaying && p.canPause !== false) {
+      p.pause()
+    } else if (!isPlaying && p.canPlay !== false) {
+      p.play()
     } else if (mediaService) {
       mediaService.runAction("playPause", false)
     }
   }
 
   function skipPrevious() {
-    if (!hasPlayer) return
-    if (activePlayer.canGoPrevious !== false) {
-      activePlayer.previous()
+    var p = activePlayer
+    if (!p) return
+    if (p.canGoPrevious !== false) {
+      p.previous()
     } else if (mediaService) {
       mediaService.runAction("previous", false)
     }
   }
 
   function skipNext() {
-    if (!hasPlayer) return
-    if (activePlayer.canGoNext !== false) {
-      activePlayer.next()
+    var p = activePlayer
+    if (!p) return
+    if (p.canGoNext !== false) {
+      p.next()
     } else if (mediaService) {
       mediaService.runAction("next", false)
     }
@@ -264,13 +275,16 @@ Item {
 
   // ------------------------------------------------------------- Position Sync
   function syncPosition() {
-    if (!hasPlayer || !activePlayer.positionSupported) {
+    // See getPlayerArtUrl() above for why activePlayer is captured into a
+    // local instead of read multiple times here.
+    var p = activePlayer
+    if (!p || !p.positionSupported) {
       basePosition = 0
       currentPosition = 0
       baseTimestamp = 0
       return
     }
-    basePosition = Math.max(0, activePlayer.position)
+    basePosition = Math.max(0, p.position)
     baseTimestamp = Date.now()
     var len = root.trackLength
     currentPosition = len > 0 ? Math.min(basePosition, len) : basePosition
