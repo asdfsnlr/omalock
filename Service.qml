@@ -31,6 +31,9 @@ Item {
   readonly property string bashBin: "/usr/bin/bash"
   readonly property string readlinkBin: "/usr/bin/readlink"
   readonly property string hyprctlBin: "/usr/bin/hyprctl"
+  // Omarchy's own (root-owned) helper that extracts one cached still frame from
+  // a video background, used as the lock poster behind the OWE video feed.
+  readonly property string posterScript: "/usr/share/omarchy/shell/plugins/lock/poster.sh"
   // Minimal PATH for bash -c helper scripts that shell out to sibling
   // omarchy-* tools and coreutils by bare name -- root-owned dirs only.
   readonly property string trustedSystemPath: "/usr/share/omarchy/bin:/usr/bin"
@@ -142,6 +145,10 @@ Item {
   property int failedAttempts: 0
   property string backgroundPath: ""
   property int backgroundVersion: 0
+  // Still frame of a video background (see refreshPoster). Since Omarchy moved
+  // video playback out of the shell into OWE, the lock shows this poster and
+  // overlays OWE's live feed on top when it is available.
+  property string videoPosterPath: ""
   property string lastEvent: "init"
   property string lastEventAt: ""
   property bool displaysBlank: false
@@ -425,6 +432,7 @@ Item {
         id: lockView
         anchors.fill: parent
         backgroundPath: root.backgroundPath
+        videoPosterPath: root.videoPosterPath
         backgroundVersion: root.backgroundVersion
         fingerprintConfigured: root.fingerprintConfigured
         authenticatingPassword: root.authenticatingPassword
@@ -459,6 +467,7 @@ Item {
     LockView {
       anchors.fill: parent
       backgroundPath: root.backgroundPath
+      videoPosterPath: root.videoPosterPath
       backgroundVersion: root.backgroundVersion
       fingerprintConfigured: root.fingerprintConfigured
       authenticatingPassword: false
@@ -559,9 +568,38 @@ Item {
       onStreamFinished: {
         var next = String(text || "").trim()
         if (next !== root.backgroundPath) {
+          root.videoPosterPath = ""
           root.backgroundPath = next
           root.backgroundVersion += 1
         }
+        root.refreshPoster()
+      }
+    }
+  }
+
+  function refreshPoster() {
+    if (!root.videoBackground) {
+      root.videoPosterPath = ""
+      return
+    }
+    if (posterProc.running) return
+    posterProc.sourcePath = root.backgroundPath
+    posterProc.running = true
+  }
+
+  Process {
+    id: posterProc
+    property string sourcePath: ""
+    command: [root.bashBin, root.posterScript, sourcePath]
+    clearEnvironment: true
+    environment: root.bashHelperEnv
+    stdout: StdioCollector { id: posterOutput; waitForEnd: true }
+    onExited: function(exitCode) {
+      // The background changed while this ran: extract for the new one instead.
+      if (sourcePath !== root.backgroundPath) {
+        root.refreshPoster()
+      } else {
+        root.videoPosterPath = exitCode === 0 ? String(posterOutput.text || "").trim() : ""
       }
     }
   }

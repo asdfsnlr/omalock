@@ -7,6 +7,7 @@ Item {
   id: root
 
   property string backgroundPath: ""
+  property string videoPosterPath: ""
   property int backgroundVersion: 0
   property bool fingerprintConfigured: false
   property bool authenticatingPassword: false
@@ -54,6 +55,9 @@ Item {
   signal passwordTextEdited(string password)
   signal clearFailureRequested()
   signal wakeRequested()
+  readonly property bool video: Util.isVideoPath(root.backgroundPath)
+  readonly property bool feedActive: root.video && root.loadBackground && !root.displaysBlank && !root.powerSaverActive
+
   signal previewDismissRequested()
 
   function forcePasswordFocus() {
@@ -97,15 +101,15 @@ Item {
     BackgroundMedia {
       id: wallpaper
       anchors.fill: parent
-      path: root.loadBackground ? root.backgroundPath : ""
+      // BackgroundMedia draws stills only (video playback moved to OWE): for a
+      // video background show its cached poster; the OWE feed goes on top.
+      path: root.loadBackground ? (root.video ? root.videoPosterPath : root.backgroundPath) : ""
       version: root.backgroundVersion
-      playbackEnabled: root.loadBackground && !root.displaysBlank && !root.powerSaverActive
     }
 
     MultiEffect {
       anchors.fill: wallpaper
-      source: wallpaper.video ? null : wallpaper
-      visible: !wallpaper.video
+      source: wallpaper
       autoPaddingEnabled: false
       blurEnabled: root.loadBackground && wallpaper.ready
       blur: 1.0
@@ -114,11 +118,23 @@ Item {
       contrast: -0.08
     }
 
-    // Qt's video output cannot be sampled by MultiEffect on every renderer.
+    // The poster stays behind the feed when policy pauses playback, the OWE
+    // module is unavailable, or a new connection has not received a frame yet.
+    // Loaded by path so a system without Owe.LockFeed shows no lock video
+    // instead of losing the whole lock screen.
+    Loader {
+      id: feedLoader
+      anchors.fill: parent
+      active: root.feedActive
+      source: "LockFeedSurface.qml"
+      visible: status === Loader.Ready
+    }
+
+    // The feed item cannot be sampled by MultiEffect on every renderer.
     // Keep video wallpapers visible and darken them slightly for legibility.
     Rectangle {
-      anchors.fill: wallpaper
-      visible: wallpaper.video
+      anchors.fill: feedLoader
+      visible: root.video
       color: "#22000000"
     }
 
