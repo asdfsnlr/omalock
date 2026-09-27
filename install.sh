@@ -52,6 +52,13 @@ else
 fi
 
 say "==> Enabling ${PLUGIN_ID}"
+# A freshly added plugin isn't known to the running shell until it rescans its
+# plugin directory; without this, enable fails with "plugin ... is not known".
+omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+for _ in 1 2 3 4 5; do
+  omarchy plugin list 2>/dev/null | grep -q "^${PLUGIN_ID}[[:space:]]" && break
+  sleep 1
+done
 omarchy plugin enable "$PLUGIN_ID" || true
 
 CLI_SOURCE="${HOME}/.config/omarchy/plugins/${PLUGIN_ID}/bin/omalock"

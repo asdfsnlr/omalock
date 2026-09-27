@@ -861,7 +861,7 @@ Item {
   }
 
   IpcHandler {
-    target: "slanger.lock"
+    target: "asdfsnlr.omalock"
 
     function openSettings(): string {
       root.toggleSettingsWindow()
